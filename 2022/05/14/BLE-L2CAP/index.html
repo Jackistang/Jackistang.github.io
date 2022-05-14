@@ -470,12 +470,12 @@
                 <h1 id="L2CAP"><a href="#L2CAP" class="headerlink" title="L2CAP"></a>L2CAP</h1><p>本文主要介绍了 L2CAP 在 BLE 里的内容，包括 L2CAP 里 <em>Protocol multiplexing</em> 的概念，BLE 使用的两种操作模式：Basic L2CAP Mode 和 LE Credit Based Flow Control Mode ，最后还包含 SDU 和 PDU 的分段重组。</p>
 <h2 id="Protocol-multiplexing"><a href="#Protocol-multiplexing" class="headerlink" title="Protocol multiplexing"></a>Protocol multiplexing</h2><p>两个蓝牙设备建立连接后，在 Controller 层面就建立起了一条逻辑链路（Logic Link），BLE 设备之间的逻辑链路成为 LE-U 。</p>
 <p>BLE 设备有很多种类的应用消息需要在这条逻辑链路上传输，因此需要一种机制来识别不同的应用协议，L2CAP 的协议多路复用就是用来解决这个问题的。L2CAP 在逻辑链路上进一步地抽象出了信道（channel）的概念，每个信道的两端都由 CID（Channel ID）标识，不同的应用协议绑定不同的 CID。如果对 TCP&#x2F;IP 协议比较熟悉的话，可以将 CID 与 TCP&#x2F;IP 协议里的<strong>端口</strong>对比理解，网络中的 IP 数据包根据 IP 地址找到了主机，然后又根据不同的端口号，进一步找到接收该数据包的进程。蓝牙协议也是如此，L2CAP 接收到数据包后，根据 CID 将数据包分发给不同的应用协议。</p>
-<p><img src="http://rbrejcj0i.hd-bkt.clouddn.com/image-20220514214427336.png" alt="端口与CID对比"></p>
+<p><img src="/images/image-20220514214427336.png" alt="端口与CID对比"></p>
 <p>TCP&#x2F;IP 里有一些默认的端口号，例如 80 代表 HTTP 协议，20 代表 SSH 协议，蓝牙协议里也规定了一些默认端口号，例如 0x0004 代表 ATT 协议，0x0006 代表 SM 协议。这也就是说，应用协议如果想接收 ATT 协议数据，监听自身 0x0004 的 CID 即可，从该 CID 上接收的数据就是 ATT 协议数据。</p>
-<p><img src="http://rbrejcj0i.hd-bkt.clouddn.com/image-20220513112904175.png" alt="CID name space on LE-U logical link"></p>
+<p><img src="/images/image-20220513112904175.png" alt="CID name space on LE-U logical link"></p>
 <h2 id="Mode"><a href="#Mode" class="headerlink" title="Mode"></a>Mode</h2><p>L2CAP 根据 Controller 类型的不同，会分别进入不同的模式工作，BLE 设备只会进入下述这两种模式。</p>
 <h3 id="Basic-L2CAP-Mode"><a href="#Basic-L2CAP-Mode" class="headerlink" title="Basic L2CAP Mode"></a>Basic L2CAP Mode</h3><p>Basic L2CAP Mode 是默认模式，也是 BLE 设备最常用的模式，一个信道的两端设备直接收发数据，没有流控，没有重传，是最简单的模式。其数据包格式（B-frame）如下：</p>
-<p><img src="http://rbrejcj0i.hd-bkt.clouddn.com/image-20220513120449142.png" alt="B-frame"></p>
+<p><img src="/images/image-20220513120449142.png" alt="B-frame"></p>
 <ul>
 <li>Length：后续负载（Information payload）的字节大小。</li>
 <li>Channel ID：该数据包的目的端口。</li>
@@ -483,7 +483,7 @@
 </ul>
 <p>负载理论上可拥有 0 ~ 65535 个字节，实际上不能超过配置的 MTU（Maximum Transmission Unit），最小的 MTU 是 23 字节。</p>
 <h3 id="LE-Credit-Based-Flow-Control-Mode"><a href="#LE-Credit-Based-Flow-Control-Mode" class="headerlink" title="LE Credit Based Flow Control Mode"></a>LE Credit Based Flow Control Mode</h3><p>Credit Based Flow Control Mode 的数据包格式（K-frame）如下：</p>
-<p><img src="http://rbrejcj0i.hd-bkt.clouddn.com/image-20220514164517746.png" alt="K-frame"></p>
+<p><img src="/images/image-20220514164517746.png" alt="K-frame"></p>
 <ul>
 <li>Length：整个 L2CAP PDU 的字节大小减 4，不包含 Length 字段和 Channel ID 字节。</li>
 <li>Channel ID：该数据包的目的端口。</li>
@@ -496,7 +496,7 @@
 <p>对端设备的信用值（允许发送 K-frame 数量）完全由本地设备控制，从而达到流控的目的。</p>
 <h2 id="分段重组"><a href="#分段重组" class="headerlink" title="分段重组"></a>分段重组</h2><p>Host 端在初始化时一般会发送  HCI_LE_Read_Buffer_Size command 命令获取 Controller 存储 ACL 数据的缓冲区大小 <code>size</code>，若 L2CAP 通过 HCI 发送的 ACL 数据大于 <code>size</code>，则就需要将 L2CAP 数据分段，并利用 HCI ACL 里的 PB Flag 字段标识，0x00 代表第一个分段包，0x01 代表连续的分段包。</p>
 <p>Host 从 Controller 接收 ACL 数据包时也需要进行重组，若 PB Flag 值为 0x10，则代表第一个分段包，0x01 代表连续的分段包。</p>
-<p><img src="http://rbrejcj0i.hd-bkt.clouddn.com/image-20220514205547075.png" alt="PB Flag"></p>
+<p><img src="/images/image-20220514205547075.png" alt="PB Flag"></p>
 
                 
             </div>
