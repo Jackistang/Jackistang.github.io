@@ -4,8 +4,8 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="keywords" content="BLE_L2CAP 详解, Hexo">
-    <meta name="description" content="L2CAP 详解本文主要介绍了 L2CAP 在 BLE 里的内容，包括 L2CAP 里 Protocol multiplexing 的概念，BLE 使用的两种操作模式：Basic L2CAP Mode 和 LE Credit Based F">
+    <meta name="keywords" content="BSD-queue, Hexo">
+    <meta name="description" content="BSD-queue本文主要介绍 OpenBSD 系统里自带的 queue 文件，里面实现了常用的单链表，双链表，队列等数据结构，并且只有一个 queue.h 文件，代码全部由宏实现。使用较广泛，NimBLE 协议栈里的单链表就是使用的 BS">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="renderer" content="webkit|ie-stand|ie-comp">
@@ -19,7 +19,7 @@
 
     
 
-    <title>BLE_L2CAP 详解 | Hexo</title>
+    <title>BSD-queue | Hexo</title>
     <link rel="icon" type="image/png" href="/favicon.png">
 
     <link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.min.css">
@@ -309,12 +309,12 @@
 
 
 
-<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/19.jpg')">
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/23.jpg')">
     <div class="container" style="right: 0px;left: 0px;">
         <div class="row">
             <div class="col s12 m12 l12">
                 <div class="brand">
-                    <h1 class="description center-align post-title">BLE_L2CAP 详解</h1>
+                    <h1 class="description center-align post-title">BSD-queue</h1>
                 </div>
             </div>
         </div>
@@ -430,8 +430,8 @@
                     
                     <div class="article-tag">
                         
-                            <a href="/tags/BLE/">
-                                <span class="chip bg-color">BLE</span>
+                            <a href="/tags/c-utils/">
+                                <span class="chip bg-color">c-utils</span>
                             </a>
                         
                     </div>
@@ -446,7 +446,7 @@
                 
                 <div class="post-date info-break-policy">
                     <i class="far fa-calendar-minus fa-fw"></i>发布日期:&nbsp;&nbsp;
-                    2022-05-14
+                    2022-05-16
                 </div>
                 
 
@@ -467,40 +467,66 @@
 
         <div class="card-content article-card-content">
             <div id="articleContent">
-                <h1 id="L2CAP-详解"><a href="#L2CAP-详解" class="headerlink" title="L2CAP 详解"></a>L2CAP 详解</h1><p>本文主要介绍了 L2CAP 在 BLE 里的内容，包括 L2CAP 里 <em>Protocol multiplexing</em> 的概念，BLE 使用的两种操作模式：Basic L2CAP Mode 和 LE Credit Based Flow Control Mode ，最后还包含 SDU 和 PDU 的分段重组。</p>
-<h2 id="Protocol-multiplexing"><a href="#Protocol-multiplexing" class="headerlink" title="Protocol multiplexing"></a>Protocol multiplexing</h2><p>两个蓝牙设备建立连接后，在 Controller 层面就建立起了一条逻辑链路（Logic Link），BLE 设备之间的逻辑链路称为 LE-U 。</p>
-<p>BLE 设备有很多种类的应用消息需要在这条逻辑链路上传输，因此需要一种机制来识别不同的应用协议，L2CAP 的协议多路复用就是用来解决这个问题的。L2CAP 在逻辑链路上进一步地抽象出了信道（channel）的概念，每个信道的两端都由 CID（Channel ID）标识，不同的应用协议绑定不同的 CID。如果对 TCP&#x2F;IP 协议比较熟悉的话，可以将 CID 与 TCP&#x2F;IP 协议里的<strong>端口</strong>对比理解，网络中的 IP 数据包根据 IP 地址找到了主机，然后又根据不同的端口号，进一步找到接收该数据包的进程。蓝牙协议也是如此，L2CAP 接收到数据包后，根据 CID 将数据包分发给不同的应用协议。</p>
-<img src="/2022/05/14/BLE-L2CAP/image-20220514214427336.png" class="" title="端口与CID对比">
-
-<p>TCP&#x2F;IP 里有一些默认的端口号，例如 80 代表 HTTP 协议，20 代表 SSH 协议，蓝牙协议里也规定了一些默认端口号，例如 0x0004 代表 ATT 协议，0x0006 代表 SM 协议。这也就是说，应用协议如果想接收 ATT 协议数据，监听自身 0x0004 的 CID 即可，从该 CID 上接收的数据就是 ATT 协议数据。</p>
-<img src="/2022/05/14/BLE-L2CAP/image-20220513112904175.png" class="" title="CID name space on LE-U logical link">
-
-<h2 id="Mode"><a href="#Mode" class="headerlink" title="Mode"></a>Mode</h2><p>L2CAP 根据 Controller 类型的不同，会分别进入不同的模式工作，BLE 设备只会进入下述这两种模式。</p>
-<h3 id="Basic-L2CAP-Mode"><a href="#Basic-L2CAP-Mode" class="headerlink" title="Basic L2CAP Mode"></a>Basic L2CAP Mode</h3><p>Basic L2CAP Mode 是默认模式，也是 BLE 设备最常用的模式，一个信道的两端设备直接收发数据，没有流控，没有重传，是最简单的模式。其数据包格式（B-frame）如下：</p>
-<img src="/2022/05/14/BLE-L2CAP/image-20220513120449142.png" class="" title="B-frame">
-
+                <h1 id="BSD-queue"><a href="#BSD-queue" class="headerlink" title="BSD-queue"></a>BSD-queue</h1><p>本文主要介绍 OpenBSD 系统里自带的 queue 文件，里面实现了常用的单链表，双链表，队列等数据结构，并且只有一个 <code>queue.h</code> 文件，代码全部由宏实现。使用较广泛，NimBLE 协议栈里的单链表就是使用的 BSD-queue 。</p>
+<p>BSD-queue 支持 5 种数据结构：单链表，双链表，尾队列，基于单链表的尾队列，环形队列。</p>
+<p><strong>单链表</strong>是其中最简单的数据结构，支持以下操作：</p>
+<ol>
+<li>在列表头部插入一个新的记录</li>
+<li>在任意列表元素后插入一个新的记录</li>
+<li>从列表头部移除一个记录</li>
+<li>正向遍历整个列表</li>
+</ol>
+<p>其他的数据结构都支持上述操作，并增加了新的功能：</p>
 <ul>
-<li>Length：后续负载（Information payload）的字节大小。</li>
-<li>Channel ID：该数据包的目的端口。</li>
-<li>Information payload：负载 PDU 数据。</li>
+<li><strong>双链表</strong>：在任意列表元素前插入一个新的记录</li>
+<li><strong>尾队列</strong>：在列表的尾部插入一个新的记录，反向遍历列表</li>
+<li><strong>单链表的尾队列</strong>：在列表的尾部插入一个新的记录</li>
+<li><strong>环形队列</strong>：在列表的尾部插入一个新的记录，反向遍历列表</li>
 </ul>
-<p>负载理论上可拥有 0 ~ 65535 个字节，实际上不能超过配置的 MTU（Maximum Transmission Unit），最小的 MTU 是 23 字节。</p>
-<h3 id="LE-Credit-Based-Flow-Control-Mode"><a href="#LE-Credit-Based-Flow-Control-Mode" class="headerlink" title="LE Credit Based Flow Control Mode"></a>LE Credit Based Flow Control Mode</h3><p>Credit Based Flow Control Mode 的数据包格式（K-frame）如下：</p>
-<img src="/2022/05/14/BLE-L2CAP/image-20220514164517746.png" class="" title="K-frame">
+<p>所有数据结构可用的功能可参考下述表格：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> *                      SLIST   LIST    STAILQ  TAILQ   CIRCLEQ</span></span><br><span class="line"><span class="comment"> * _HEAD                +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _HEAD_INITIALIZER    +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _ENTRY               +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _INIT                +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _EMPTY               +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _FIRST               +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _NEXT                +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _PREV                -       -       -       +       +</span></span><br><span class="line"><span class="comment"> * _LAST                -       -       +       +       +</span></span><br><span class="line"><span class="comment"> * _FOREACH             +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _FOREACH_REVERSE     -       -       -       +       +</span></span><br><span class="line"><span class="comment"> * _INSERT_HEAD         +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _INSERT_BEFORE       -       +       -       +       +</span></span><br><span class="line"><span class="comment"> * _INSERT_AFTER        +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _INSERT_TAIL         -       -       +       +       +</span></span><br><span class="line"><span class="comment"> * _REMOVE_HEAD         +       -       +       -       -</span></span><br><span class="line"><span class="comment"> * _REMOVE              +       +       +       +       +</span></span><br><span class="line"><span class="comment">*/</span></span><br></pre></td></tr></table></figure>
 
+<h2 id="单链表"><a href="#单链表" class="headerlink" title="单链表"></a>单链表</h2><p>本小节以单链表为例，介绍 <code>SLIST_*</code> 宏该如何使用，学会了单链表，其他的数据结构也可以类似使用。</p>
+<p>声明单链表头部：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SLIST_HEAD(headname, type) head;</span><br></pre></td></tr></table></figure>
+
+<p><code>SLIST_HEAD()</code> 宏用于申明单链表头节点，其内部包含指向链表里第一个元素的指针。<code>headname</code> 是该链表的名称，<code>type</code> 是挂载到链表上的结构体类型。声明完链表的头节点名称后，我们就可以定义头节点以及其指针：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">headname</span> <span class="title">head</span>, *<span class="title">headp</span>;</span></span><br></pre></td></tr></table></figure>
+
+<p>若是不关心头节点名称，声明代码可省略成：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SLIST_HEAD(, type) head, *headp;</span><br></pre></td></tr></table></figure>
+
+<p>示例代码如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">peer_chr</span> &#123;</span></span><br><span class="line">    SLIST_ENTRY(peer_chr) next;</span><br><span class="line">    ......</span><br><span class="line">&#125;;</span><br><span class="line">SLIST_HEAD(peer_chr_list, peer_chr);</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">peer_svc</span> &#123;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">peer_chr_list</span> <span class="title">chrs</span>;</span></span><br><span class="line">    ......</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>上述代码声明了一个单链表类型，名称为 <code>peer_chr_list</code>，链表上挂载的结构体类型是 <code>peer_chr</code>，并且在 <code>peer_svc</code> 结构体里创建了一个该单链表。</p>
+<p>初始化链表头部有两种方式，一种是 <code>SLIST_INIT(head)</code> ，另一种是静态初始化 <code>SLIST_HEAD_INITIALIZER(head)</code>，<strong>注意在使用单链表时传入的都是头节点指针</strong>。</p>
+<p><code>SLIST_ENTRY(type)</code> 宏用于定义链表里指向下一个元素的指针，<code>type</code> 为链表上挂载的结构体类型，具体使用可参考上述示例。</p>
+<p>接下来就是一系列操作单链表的宏了，包括插入元素，删除元素，遍历单链表。</p>
+<p>插入元素使用下述两个宏：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SLIST_INSERT_HEAD(head, elm, field);</span><br><span class="line">SLIST_INSERT_AFTER(slistelm, elm, field);</span><br></pre></td></tr></table></figure>
+
+<p><code>SLIST_INSERT_HEAD()</code> 宏用于在链表头部插入新元素，<code>head</code> 是链表头节点，<code>elm</code> 是待插入元素，<code>field</code> 是 <code>SLIST_ENTRY()</code> 宏创建的连接对象，例如上述示例的 <code>next</code> 。</p>
+<p><code>SLIST_INSERT_AFTER()</code> 宏用于在链表中的一个元素后插入新元素，<code>slistelm</code> 代表链表中的元素，即将在该元素后插入新元素。其余的宏参数参考上述描述。</p>
+<p>删除元素使用下述两个宏：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SLIST_REMOVE_HEAD(head, field);</span><br><span class="line">SLIST_REMOVE(head, elm, type, field);</span><br></pre></td></tr></table></figure>
+
+<p><code>SLIST_REMOVE_HEAD()</code> 用于删除链表的第一个元素，<code>SLIST_REMOVE()</code> 用于在链表中删除指定元素。</p>
+<p>单链表支持下述两种遍历方式：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SLIST_FIRST(head);</span><br><span class="line">SLIST_NEXT(elm, field);</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (np = SLIST_FIRST(&amp;head); np != <span class="literal">NULL</span>; np = SLIST_NEXT(np, FIELDNAME))</span><br><span class="line">    </span><br><span class="line">SLIST_FOREACH(np, head, FIELDNAME)</span><br></pre></td></tr></table></figure>
+
+<p>还可以用 <code>SLIST_EMPTY(head)</code> 判断单链表是否为空。</p>
+<p>例程如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">SLIST_HEAD(listhead, entry) head;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">entry</span> &#123;</span></span><br><span class="line">	...</span><br><span class="line">	SLIST_ENTRY(entry) entries;	<span class="comment">/* Simple list. */</span></span><br><span class="line">	...</span><br><span class="line">&#125; *n1, *n2, *np;</span><br><span class="line"></span><br><span class="line">SLIST_INIT(&amp;head);			<span class="comment">/* Initialize simple list. */</span></span><br><span class="line"></span><br><span class="line">n1 = <span class="built_in">malloc</span>(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> entry));	<span class="comment">/* Insert at the head. */</span></span><br><span class="line">SLIST_INSERT_HEAD(&amp;head, n1, entries);</span><br><span class="line"></span><br><span class="line">n2 = <span class="built_in">malloc</span>(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> entry));	<span class="comment">/* Insert after. */</span></span><br><span class="line">SLIST_INSERT_AFTER(n1, n2, entries);</span><br><span class="line"></span><br><span class="line">SLIST_FOREACH(np, &amp;head, entries)	<span class="comment">/* Forward traversal. */</span></span><br><span class="line">	np-&gt; ...</span><br><span class="line"></span><br><span class="line"><span class="keyword">while</span> (!SLIST_EMPTY(&amp;head)) &#123;	 	<span class="comment">/* Delete. */</span></span><br><span class="line">	n1 = SLIST_FIRST(&amp;head);</span><br><span class="line">	SLIST_REMOVE_HEAD(&amp;head, entries);</span><br><span class="line">	<span class="built_in">free</span>(n1);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>参考：</p>
 <ul>
-<li>Length：整个 L2CAP PDU 的字节大小减 4，不包含 Length 字段和 Channel ID 字节。</li>
-<li>Channel ID：该数据包的目的端口。</li>
-<li>L2CAP SDU Length：由于 L2CAP 传输的 PDU 大小不能超过配置的 MPS（Maximum PDU payload Size），因此若有大于 MPS 的上层应用服务数据 SDU（Service Data Unit）需要传输，需要将 SDU 分段成多个 K-frame 连续发送。第一个发送的 K-frame 携带 L2CAP SDU Length 字段，代表该 SDU 的全部大小；后续的 K-frame 不携带该字段。</li>
-<li>Information Payload：负载 PDU 数据，不能大于 MPS 。</li>
+<li><a target="_blank" rel="noopener" href="https://man.openbsd.org/queue.3">https://man.openbsd.org/queue.3</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/Jackistang/c-utils/blob/main/BSD-queue/queue.h">https://github.com/Jackistang/c-utils/blob/main/BSD-queue/queue.h</a></li>
 </ul>
-<p>该模式里的两个 CID 想建立连接，需要发送 L2CAP 的<strong>信号数据包</strong>（Signaling packet），在 BLE 里占用 0x0005 CID 。</p>
-<p>该模式里的流控是通过<strong>信用值</strong>（Credit）来实现的，一个设备想和另一个设备建立 L2CAP 连接，需发送 L2CAP_LE_CREDIT_BASED_CONNECTION_REQ 请求，请求里包含一个 <code>Initial Credits</code> 值，代表对端可以发送的 K-frame 数量。另一个设备返回的 L2CAP_LE_CREDIT_BASED_CONNECTION_RSP 响应里，也包含一个 <code>Initial Credits</code> 值，这样建立连接的两个设备都拥有了自己可以发送的 K-frame 数量。</p>
-<p>设备每发送一个 K-frame，信用值减一，若信用值为 0，则代表该设备不能发送 K-frame 了，也就达到了流控的目的。对端设备可以在任意时刻发送 L2CAP_FLOW_CONTROL_CREDIT_IND ，该数据包里有一个 <code>Credits</code> 值，代表允许对端继续发送的 K-frame 数量。收到该数据包后，设备自身的信用值需要加上该 <code>Credits</code> 值。</p>
-<p>对端设备的信用值（允许发送 K-frame 数量）完全由本地设备控制，从而达到流控的目的。</p>
-<h2 id="分段重组"><a href="#分段重组" class="headerlink" title="分段重组"></a>分段重组</h2><p>Host 端在初始化时一般会发送  HCI_LE_Read_Buffer_Size command 命令获取 Controller 存储 ACL 数据的缓冲区大小 <code>size</code>，若 L2CAP 通过 HCI 发送的 ACL 数据大于 <code>size</code>，则就需要将 L2CAP 数据分段，并利用 HCI ACL 里的 PB Flag 字段标识，0x00 代表第一个分段包，0x01 代表连续的分段包。</p>
-<p>Host 从 Controller 接收 ACL 数据包时也需要进行重组，若 PB Flag 值为 0x10，则代表第一个分段包，0x01 代表连续的分段包。</p>
-<img src="/2022/05/14/BLE-L2CAP/image-20220514205547075.png" class="" title="PB Flag">
+
                 
             </div>
             <hr/>
@@ -526,7 +552,7 @@
                     </i>
                 </span>
                 <span class="reprint-info">
-                    <a href="http://Jackistang.github.io/2022/05/14/BLE-L2CAP/">http://Jackistang.github.io/2022/05/14/BLE-L2CAP/</a>
+                    <a href="http://Jackistang.github.io/2022/05/16/BSD-queue/">http://Jackistang.github.io/2022/05/16/BSD-queue/</a>
                 </span>
             </div>
             <div class="reprint__notice">
@@ -564,8 +590,8 @@
                     
                         <div class="article-tag">
                             
-                                <a href="/tags/BLE/">
-                                    <span class="chip bg-color">BLE</span>
+                                <a href="/tags/c-utils/">
+                                    <span class="chip bg-color">c-utils</span>
                                 </a>
                             
                         </div>
@@ -739,9 +765,10 @@
 <article id="prenext-posts" class="prev-next articles">
     <div class="row article-row">
         
-        <div class="article col s12 m6" data-aos="fade-up">
+        <div class="article col s12 m6" data-aos="fade-up" data-aos="fade-up">
             <div class="article-badge left-badge text-color">
-                <i class="fas fa-chevron-left"></i>&nbsp;上一篇</div>
+                <i class="far fa-dot-circle"></i>&nbsp;本篇
+            </div>
             <div class="card">
                 <a href="/2022/05/16/BSD-queue/">
                     <div class="card-image">
@@ -759,9 +786,9 @@
                         
                     </div>
                     <div class="publish-info">
-                        <span class="publish-date">
-                            <i class="far fa-clock fa-fw icon-date"></i>2022-05-16
-                        </span>
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2022-05-16
+                            </span>
                         <span class="publish-author">
                             
                             <i class="fas fa-user fa-fw"></i>
@@ -770,6 +797,7 @@
                         </span>
                     </div>
                 </div>
+
                 
                 <div class="card-action article-tags">
                     
@@ -788,13 +816,13 @@
                 下一篇&nbsp;<i class="fas fa-chevron-right"></i>
             </div>
             <div class="card">
-                <a href="/2022/05/12/hexo-%E4%BD%BF%E7%94%A8%E8%B5%84%E6%96%99/">
+                <a href="/2022/05/14/BLE-L2CAP/">
                     <div class="card-image">
                         
                         
-                        <img src="/medias/featureimages/6.jpg" class="responsive-img" alt="hexo 使用资料">
+                        <img src="/medias/featureimages/19.jpg" class="responsive-img" alt="BLE_L2CAP 详解">
                         
-                        <span class="card-title">hexo 使用资料</span>
+                        <span class="card-title">BLE_L2CAP 详解</span>
                     </div>
                 </a>
                 <div class="card-content article-content">
@@ -805,7 +833,7 @@
                     </div>
                     <div class="publish-info">
                             <span class="publish-date">
-                                <i class="far fa-clock fa-fw icon-date"></i>2022-05-12
+                                <i class="far fa-clock fa-fw icon-date"></i>2022-05-14
                             </span>
                         <span class="publish-author">
                             
@@ -814,6 +842,14 @@
                             
                         </span>
                     </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/BLE/">
+                        <span class="chip bg-color">BLE</span>
+                    </a>
+                    
                 </div>
                 
             </div>
