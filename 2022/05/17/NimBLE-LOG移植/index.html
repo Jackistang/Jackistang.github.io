@@ -4,8 +4,10 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="keywords" content="BSD-queue, Hexo">
-    <meta name="description" content="BSD-queue本文主要介绍 OpenBSD 系统里自带的 queue 文件，里面实现了常用的单链表，双链表，队列等数据结构，并且只有一个 queue.h 文件，代码全部由宏实现。使用较广泛，NimBLE 协议栈里的单链表就是使用的 BS">
+    <meta name="keywords" content="NimBLE_LOG移植, Hexo">
+    <meta name="description" content="本文记录了在 rtthread 上移植 NimBLE 1.5.0 日志系统的过程，包括需要注意的关键点。
+NimBLE 日志模块NimBLE 供移植的日志系统都在下列文件里：
+123456789101112- porting/  - nim">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="renderer" content="webkit|ie-stand|ie-comp">
@@ -19,7 +21,7 @@
 
     
 
-    <title>BSD-queue | Hexo</title>
+    <title>NimBLE_LOG移植 | Hexo</title>
     <link rel="icon" type="image/png" href="/favicon.png">
 
     <link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.min.css">
@@ -309,12 +311,12 @@
 
 
 
-<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/23.jpg')">
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/8.jpg')">
     <div class="container" style="right: 0px;left: 0px;">
         <div class="row">
             <div class="col s12 m12 l12">
                 <div class="brand">
-                    <h1 class="description center-align post-title">BSD-queue</h1>
+                    <h1 class="description center-align post-title">NimBLE_LOG移植</h1>
                 </div>
             </div>
         </div>
@@ -430,8 +432,8 @@
                     
                     <div class="article-tag">
                         
-                            <a href="/tags/c-utils/">
-                                <span class="chip bg-color">c-utils</span>
+                            <a href="/tags/NimBLE-log/">
+                                <span class="chip bg-color">NimBLE log</span>
                             </a>
                         
                     </div>
@@ -446,7 +448,7 @@
                 
                 <div class="post-date info-break-policy">
                     <i class="far fa-calendar-minus fa-fw"></i>发布日期:&nbsp;&nbsp;
-                    2022-05-16
+                    2022-05-17
                 </div>
                 
 
@@ -467,65 +469,38 @@
 
         <div class="card-content article-card-content">
             <div id="articleContent">
-                <h1 id="BSD-queue"><a href="#BSD-queue" class="headerlink" title="BSD-queue"></a>BSD-queue</h1><p>本文主要介绍 OpenBSD 系统里自带的 queue 文件，里面实现了常用的单链表，双链表，队列等数据结构，并且只有一个 <code>queue.h</code> 文件，代码全部由宏实现。使用较广泛，NimBLE 协议栈里的单链表就是使用的 BSD-queue 。</p>
-<p>BSD-queue 支持 5 种数据结构：单链表，双链表，尾队列，基于单链表的尾队列，环形队列。</p>
-<p><strong>单链表</strong>是其中最简单的数据结构，支持以下操作：</p>
-<ol>
-<li>在列表头部插入一个新的记录</li>
-<li>在任意列表元素后插入一个新的记录</li>
-<li>从列表头部移除一个记录</li>
-<li>正向遍历整个列表</li>
-</ol>
-<p>其他的数据结构都支持上述操作，并增加了新的功能：</p>
+                <p>本文记录了在 rtthread 上移植 NimBLE 1.5.0 日志系统的过程，包括需要注意的关键点。</p>
+<h2 id="NimBLE-日志模块"><a href="#NimBLE-日志模块" class="headerlink" title="NimBLE 日志模块"></a>NimBLE 日志模块</h2><p>NimBLE 供移植的日志系统都在下列文件里：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">- porting/</span><br><span class="line">  - nimble/</span><br><span class="line">    - include/</span><br><span class="line">      - log/</span><br><span class="line">        - log.h	# 无用文件</span><br><span class="line">      - log_common/</span><br><span class="line">        - ignore.h # 定义了 IGNORE() 宏，用于忽略宏参数</span><br><span class="line">        - log_common.h # 定义了一些日志帮助宏</span><br><span class="line">      - logcfg/</span><br><span class="line">        - logcfg.h # 配置 NimBLE host,mesh,default 模块的日志宏</span><br><span class="line">      - modlog/</span><br><span class="line">        - modlog.h # 基于 printf 的简易日志库</span><br></pre></td></tr></table></figure>
+
+<p>浏览一遍上述文件后，可以知道最重要的就只有两个文件：</p>
 <ul>
-<li><strong>双链表</strong>：在任意列表元素前插入一个新的记录</li>
-<li><strong>尾队列</strong>：在列表的尾部插入一个新的记录，反向遍历列表</li>
-<li><strong>单链表的尾队列</strong>：在列表的尾部插入一个新的记录</li>
-<li><strong>环形队列</strong>：在列表的尾部插入一个新的记录，反向遍历列表</li>
+<li><code>logcfg.h</code>：协议栈日志配置接口。</li>
+<li><code>modlog.h</code>：协议栈自带的基于 printf 的简易日志库。</li>
 </ul>
-<p>所有数据结构可用的功能可参考下述表格：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> *                      SLIST   LIST    STAILQ  TAILQ   CIRCLEQ</span></span><br><span class="line"><span class="comment"> * _HEAD                +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _HEAD_INITIALIZER    +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _ENTRY               +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _INIT                +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _EMPTY               +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _FIRST               +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _NEXT                +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _PREV                -       -       -       +       +</span></span><br><span class="line"><span class="comment"> * _LAST                -       -       +       +       +</span></span><br><span class="line"><span class="comment"> * _FOREACH             +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _FOREACH_REVERSE     -       -       -       +       +</span></span><br><span class="line"><span class="comment"> * _INSERT_HEAD         +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _INSERT_BEFORE       -       +       -       +       +</span></span><br><span class="line"><span class="comment"> * _INSERT_AFTER        +       +       +       +       +</span></span><br><span class="line"><span class="comment"> * _INSERT_TAIL         -       -       +       +       +</span></span><br><span class="line"><span class="comment"> * _REMOVE_HEAD         +       -       +       -       -</span></span><br><span class="line"><span class="comment"> * _REMOVE              +       +       +       +       +</span></span><br><span class="line"><span class="comment">*/</span></span><br></pre></td></tr></table></figure>
+<p>查看 logcfg.h 文件：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;modlog/modlog.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;log_common/log_common.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_DEBUG(...) IGNORE(__VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_INFO(...) MODLOG_INFO(4, __VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_WARN(...) MODLOG_WARN(4, __VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_ERROR(...) MODLOG_ERROR(4, __VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_CRITICAL(...) MODLOG_CRITICAL(4, __VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_DISABLED(...) MODLOG_DISABLED(4, __VA_ARGS__)</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DFLT_LOG_DEBUG(...) IGNORE(__VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DFLT_LOG_INFO(...) MODLOG_INFO(0, __VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DFLT_LOG_WARN(...) MODLOG_WARN(0, __VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DFLT_LOG_ERROR(...) MODLOG_ERROR(0, __VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DFLT_LOG_CRITICAL(...) MODLOG_CRITICAL(0, __VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DFLT_LOG_DISABLED(...) MODLOG_DISABLED(0, __VA_ARGS__)</span></span><br></pre></td></tr></table></figure>
 
-<h2 id="单链表"><a href="#单链表" class="headerlink" title="单链表"></a>单链表</h2><p>本小节以单链表为例，介绍 <code>SLIST_*</code> 宏该如何使用，学会了单链表，其他的数据结构也可以类似使用。</p>
-<p>声明单链表头部：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SLIST_HEAD(headname, type) head;</span><br></pre></td></tr></table></figure>
+<p>该文件内部默认使用协议栈自带的 modlog 日志库，并且提供了 <code>BLE_HS_LOG_*()</code> 和 <code>DFLT_LOG_*()</code>，一个用于 Host 协议栈日志，另一个用于默认模块日志。</p>
+<p>在 <code>nimble/host/include/ble_hs_log.h</code> 文件里包含了 Host 协议栈的日志接口，简化了上述接口：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;modlog/modlog.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;log/log.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* Only include the logcfg header if this version of newt can generate it. */</span></span><br><span class="line"><span class="meta">#<span class="keyword">if</span> MYNEWT_VAL(NEWT_FEATURE_LOGCFG)</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;logcfg/logcfg.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG(lvl, ...) \</span></span><br><span class="line"><span class="meta">    BLE_HS_LOG_ ## lvl(__VA_ARGS__)</span></span><br></pre></td></tr></table></figure>
 
-<p><code>SLIST_HEAD()</code> 宏用于声明单链表头节点，其内部包含指向链表里第一个元素的指针。<code>headname</code> 是该链表的名称，<code>type</code> 是挂载到链表上的结构体类型。声明完链表的头节点名称后，我们就可以定义头节点以及其指针：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">headname</span> <span class="title">head</span>, *<span class="title">headp</span>;</span></span><br></pre></td></tr></table></figure>
-
-<p>若是不关心头节点名称，声明代码可省略成：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SLIST_HEAD(, type) head, *headp;</span><br></pre></td></tr></table></figure>
-
-<p>示例代码如下：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">peer_chr</span> &#123;</span></span><br><span class="line">    SLIST_ENTRY(peer_chr) next;</span><br><span class="line">    ......</span><br><span class="line">&#125;;</span><br><span class="line">SLIST_HEAD(peer_chr_list, peer_chr);</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">peer_svc</span> &#123;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">peer_chr_list</span> <span class="title">chrs</span>;</span></span><br><span class="line">    ......</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-
-<p>上述代码声明了一个单链表类型，名称为 <code>peer_chr_list</code>，链表上挂载的结构体类型是 <code>peer_chr</code>，并且在 <code>peer_svc</code> 结构体里创建了一个该单链表。</p>
-<p>初始化链表头部有两种方式，一种是 <code>SLIST_INIT(head)</code> ，另一种是静态初始化 <code>SLIST_HEAD_INITIALIZER(head)</code>，<strong>注意在使用单链表时传入的都是头节点指针</strong>。</p>
-<p><code>SLIST_ENTRY(type)</code> 宏用于定义链表里指向下一个元素的指针，<code>type</code> 为链表上挂载的结构体类型，具体使用可参考上述示例。</p>
-<p>接下来就是一系列操作单链表的宏了，包括插入元素，删除元素，遍历单链表。</p>
-<p>插入元素使用下述两个宏：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SLIST_INSERT_HEAD(head, elm, field);</span><br><span class="line">SLIST_INSERT_AFTER(slistelm, elm, field);</span><br></pre></td></tr></table></figure>
-
-<p><code>SLIST_INSERT_HEAD()</code> 宏用于在链表头部插入新元素，<code>head</code> 是链表头节点，<code>elm</code> 是待插入元素，<code>field</code> 是 <code>SLIST_ENTRY()</code> 宏创建的连接对象，例如上述示例的 <code>next</code> 。</p>
-<p><code>SLIST_INSERT_AFTER()</code> 宏用于在链表中的一个元素后插入新元素，<code>slistelm</code> 代表链表中的元素，即将在该元素后插入新元素。其余的宏参数参考上述描述。</p>
-<p>删除元素使用下述两个宏：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SLIST_REMOVE_HEAD(head, field);</span><br><span class="line">SLIST_REMOVE(head, elm, type, field);</span><br></pre></td></tr></table></figure>
-
-<p><code>SLIST_REMOVE_HEAD()</code> 用于删除链表的第一个元素，<code>SLIST_REMOVE()</code> 用于在链表中删除指定元素。</p>
-<p>单链表支持下述两种遍历方式：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SLIST_FIRST(head);</span><br><span class="line">SLIST_NEXT(elm, field);</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (np = SLIST_FIRST(&amp;head); np != <span class="literal">NULL</span>; np = SLIST_NEXT(np, FIELDNAME))</span><br><span class="line">    </span><br><span class="line">SLIST_FOREACH(np, head, FIELDNAME)</span><br></pre></td></tr></table></figure>
-
-<p>还可以用 <code>SLIST_EMPTY(head)</code> 判断单链表是否为空。</p>
-<p>例程如下：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">SLIST_HEAD(listhead, entry) head;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">entry</span> &#123;</span></span><br><span class="line">	...</span><br><span class="line">	SLIST_ENTRY(entry) entries;	<span class="comment">/* Simple list. */</span></span><br><span class="line">	...</span><br><span class="line">&#125; *n1, *n2, *np;</span><br><span class="line"></span><br><span class="line">SLIST_INIT(&amp;head);			<span class="comment">/* Initialize simple list. */</span></span><br><span class="line"></span><br><span class="line">n1 = <span class="built_in">malloc</span>(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> entry));	<span class="comment">/* Insert at the head. */</span></span><br><span class="line">SLIST_INSERT_HEAD(&amp;head, n1, entries);</span><br><span class="line"></span><br><span class="line">n2 = <span class="built_in">malloc</span>(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> entry));	<span class="comment">/* Insert after. */</span></span><br><span class="line">SLIST_INSERT_AFTER(n1, n2, entries);</span><br><span class="line"></span><br><span class="line">SLIST_FOREACH(np, &amp;head, entries)	<span class="comment">/* Forward traversal. */</span></span><br><span class="line">	np-&gt; ...</span><br><span class="line"></span><br><span class="line"><span class="keyword">while</span> (!SLIST_EMPTY(&amp;head)) &#123;	 	<span class="comment">/* Delete. */</span></span><br><span class="line">	n1 = SLIST_FIRST(&amp;head);</span><br><span class="line">	SLIST_REMOVE_HEAD(&amp;head, entries);</span><br><span class="line">	<span class="built_in">free</span>(n1);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这样协议栈内部的日志才能看懂：<code>BLE_HS_LOG(INFO, &quot;duration=forever&quot;);</code> </p>
+<p>并且只有在 <code>MYNEWT_VAL(NEWT_FEATURE_LOGCFG)</code> 宏为 1 时才允许发送日志，默认为 1 。</p>
+<h2 id="日志模块移植"><a href="#日志模块移植" class="headerlink" title="日志模块移植"></a>日志模块移植</h2><p>如果仅仅想使用协议栈自带的日志功能，将 <code>MYNEWT_VAL(NEWT_FEATURE_LOGCFG)</code> 宏配置为 1，并且定义日志级别 <code>MYNEWT_VAL(LOG_LEVEL)</code> 即可，该日志是静态编译生效的。在 <code>modlog.h</code> 文件里定义了相关条件编译宏。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">if</span> MYNEWT_VAL(LOG_LEVEL) &lt;= LOG_LEVEL_DEBUG</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MODLOG_DEBUG(ml_mod_, ml_msg_, ...) \</span></span><br><span class="line"><span class="meta">    printf((ml_msg_), ##__VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">else</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MODLOG_DEBUG(ml_mod_, ...) IGNORE(__VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br></pre></td></tr></table></figure>
 
 
 
-<p>参考：</p>
-<ul>
-<li><a target="_blank" rel="noopener" href="https://man.openbsd.org/queue.3">https://man.openbsd.org/queue.3</a></li>
-<li><a target="_blank" rel="noopener" href="https://github.com/Jackistang/c-utils/blob/main/BSD-queue/queue.h">https://github.com/Jackistang/c-utils/blob/main/BSD-queue/queue.h</a></li>
-</ul>
+<p>若是想对接其他的日志库，以 rtthread 的 rtdbg 日志模块为例，至少需要将 <code>BLE_HS_LOG_*()</code> 和 <code>MODLOG_DFLT_*()</code> 这两个对接。</p>
+<p>在 <code>porting/npl/rtthread/include/</code> 目录下创建 <code>logcfg/logcfg.h</code> 文件，并填充日志模块对接内容。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> DBG_TAG <span class="string">&quot;nimble&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DBG_LVL DBG_INFO</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;rtdbg.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_DEBUG(...)       LOG_D(__VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_INFO(...)        LOG_I(__VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_WARN(...)        LOG_W(__VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_ERROR(...)       LOG_E(__VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_CRITICAL(...)    LOG_E(__VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_DISABLED(...)    IGNORE(__VA_ARGS__)</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>注意：此时编译系统内有两个 <code>logcfg/logcfg.h</code> 头文件，而 <code>nimble/host/include/ble_hs_log.h</code> 文件里仅仅 <code>#include &quot;logcfg/logcfg.h&quot;</code>，怎么确定它包含的是哪个头文件呢？</strong></p>
+<p>在编译构建脚本里，我们在导入头文件时需要将移植目录头文件路径  <code>porting/npl/rtthread/include/</code> 放在系统自带目录之前 <code>/porting/nimble/include</code> 。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">path = [</span><br><span class="line">    cwd + <span class="string">&#x27;/porting/npl/rtthread/include&#x27;</span>,</span><br><span class="line">    cwd + <span class="string">&#x27;/porting/nimble/include&#x27;</span></span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+
+<p>完整的移植信息参考：<a target="_blank" rel="noopener" href="https://github.com/Jackistang/nimble/commit/f03bde795fc05489da007b714070154d554c482e">https://github.com/Jackistang/nimble/commit/f03bde795fc05489da007b714070154d554c482e</a></p>
 
                 
             </div>
@@ -552,7 +527,7 @@
                     </i>
                 </span>
                 <span class="reprint-info">
-                    <a href="http://Jackistang.github.io/2022/05/16/BSD-queue/">http://Jackistang.github.io/2022/05/16/BSD-queue/</a>
+                    <a href="http://Jackistang.github.io/2022/05/17/NimBLE-LOG%E7%A7%BB%E6%A4%8D/">http://Jackistang.github.io/2022/05/17/NimBLE-LOG%E7%A7%BB%E6%A4%8D/</a>
                 </span>
             </div>
             <div class="reprint__notice">
@@ -590,8 +565,8 @@
                     
                         <div class="article-tag">
                             
-                                <a href="/tags/c-utils/">
-                                    <span class="chip bg-color">c-utils</span>
+                                <a href="/tags/NimBLE-log/">
+                                    <span class="chip bg-color">NimBLE log</span>
                                 </a>
                             
                         </div>
@@ -765,9 +740,10 @@
 <article id="prenext-posts" class="prev-next articles">
     <div class="row article-row">
         
-        <div class="article col s12 m6" data-aos="fade-up">
+        <div class="article col s12 m6" data-aos="fade-up" data-aos="fade-up">
             <div class="article-badge left-badge text-color">
-                <i class="fas fa-chevron-left"></i>&nbsp;上一篇</div>
+                <i class="far fa-dot-circle"></i>&nbsp;本篇
+            </div>
             <div class="card">
                 <a href="/2022/05/17/NimBLE-LOG%E7%A7%BB%E6%A4%8D/">
                     <div class="card-image">
@@ -785,9 +761,9 @@
                         
                     </div>
                     <div class="publish-info">
-                        <span class="publish-date">
-                            <i class="far fa-clock fa-fw icon-date"></i>2022-05-17
-                        </span>
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2022-05-17
+                            </span>
                         <span class="publish-author">
                             
                             <i class="fas fa-user fa-fw"></i>
@@ -796,6 +772,7 @@
                         </span>
                     </div>
                 </div>
+
                 
                 <div class="card-action article-tags">
                     
@@ -814,13 +791,13 @@
                 下一篇&nbsp;<i class="fas fa-chevron-right"></i>
             </div>
             <div class="card">
-                <a href="/2022/05/14/BLE-L2CAP/">
+                <a href="/2022/05/16/BSD-queue/">
                     <div class="card-image">
                         
                         
-                        <img src="/medias/featureimages/19.jpg" class="responsive-img" alt="BLE_L2CAP 详解">
+                        <img src="/medias/featureimages/23.jpg" class="responsive-img" alt="BSD-queue">
                         
-                        <span class="card-title">BLE_L2CAP 详解</span>
+                        <span class="card-title">BSD-queue</span>
                     </div>
                 </a>
                 <div class="card-content article-content">
@@ -831,7 +808,7 @@
                     </div>
                     <div class="publish-info">
                             <span class="publish-date">
-                                <i class="far fa-clock fa-fw icon-date"></i>2022-05-14
+                                <i class="far fa-clock fa-fw icon-date"></i>2022-05-16
                             </span>
                         <span class="publish-author">
                             
@@ -844,8 +821,8 @@
                 
                 <div class="card-action article-tags">
                     
-                    <a href="/tags/BLE/">
-                        <span class="chip bg-color">BLE</span>
+                    <a href="/tags/c-utils/">
+                        <span class="chip bg-color">c-utils</span>
                     </a>
                     
                 </div>
