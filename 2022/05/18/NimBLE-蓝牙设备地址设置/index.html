@@ -4,8 +4,11 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="keywords" content="BSD-queue, Hexo">
-    <meta name="description" content="BSD-queue本文主要介绍 OpenBSD 系统里自带的 queue 文件，里面实现了常用的单链表，双链表，队列等数据结构，并且只有一个 queue.h 文件，代码全部由宏实现。使用较广泛，NimBLE 协议栈里的单链表就是使用的 BS">
+    <meta name="keywords" content="NimBLE-蓝牙设备地址设置, Hexo">
+    <meta name="description" content="本文主要介绍 NimBLE Host 端的蓝牙地址如何配置，Controller 端请参考：NimBLE - Configure device address 。
+NimBLE 里与蓝牙地址设置相关的文件有：
+- nimble/
+  - h">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="renderer" content="webkit|ie-stand|ie-comp">
@@ -19,7 +22,7 @@
 
     
 
-    <title>BSD-queue | Hexo</title>
+    <title>NimBLE-蓝牙设备地址设置 | Hexo</title>
     <link rel="icon" type="image/png" href="/favicon.png">
 
     <link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.min.css">
@@ -309,12 +312,12 @@
 
 
 
-<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/23.jpg')">
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/15.jpg')">
     <div class="container" style="right: 0px;left: 0px;">
         <div class="row">
             <div class="col s12 m12 l12">
                 <div class="brand">
-                    <h1 class="description center-align post-title">BSD-queue</h1>
+                    <h1 class="description center-align post-title">NimBLE-蓝牙设备地址设置</h1>
                 </div>
             </div>
         </div>
@@ -430,8 +433,12 @@
                     
                     <div class="article-tag">
                         
-                            <a href="/tags/c-utils/">
-                                <span class="chip bg-color">c-utils</span>
+                            <a href="/tags/NimBLE/">
+                                <span class="chip bg-color">NimBLE</span>
+                            </a>
+                        
+                            <a href="/tags/Bluetooth-Address/">
+                                <span class="chip bg-color">Bluetooth Address</span>
                             </a>
                         
                     </div>
@@ -446,7 +453,7 @@
                 
                 <div class="post-date info-break-policy">
                     <i class="far fa-calendar-minus fa-fw"></i>发布日期:&nbsp;&nbsp;
-                    2022-05-16
+                    2022-05-18
                 </div>
                 
 
@@ -470,121 +477,84 @@
 
         <div class="card-content article-card-content">
             <div id="articleContent">
-                <h1 id="BSD-queue"><a href="#BSD-queue" class="headerlink" title="BSD-queue"></a>BSD-queue</h1><p>本文主要介绍 OpenBSD 系统里自带的 queue 文件，里面实现了常用的单链表，双链表，队列等数据结构，并且只有一个 <code>queue.h</code> 文件，代码全部由宏实现。使用较广泛，NimBLE 协议栈里的单链表就是使用的 BSD-queue 。</p>
-<p>BSD-queue 支持 5 种数据结构：单链表，双链表，尾队列，基于单链表的尾队列，环形队列。</p>
-<p><strong>单链表</strong>是其中最简单的数据结构，支持以下操作：</p>
-<ol>
-<li>在列表头部插入一个新的记录</li>
-<li>在任意列表元素后插入一个新的记录</li>
-<li>从列表头部移除一个记录</li>
-<li>正向遍历整个列表</li>
-</ol>
-<p>其他的数据结构都支持上述操作，并增加了新的功能：</p>
+                <p>本文主要介绍 NimBLE Host 端的蓝牙地址如何配置，Controller 端请参考：<a target="_blank" rel="noopener" href="https://mynewt.apache.org/latest/network/ble_setup/ble_addr.html">NimBLE - Configure device address</a> 。</p>
+<p>NimBLE 里与蓝牙地址设置相关的文件有：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">- nimble/
+  - host/
+   - include/
+    - host/
+     - ble_hs_id.h <span class="token comment"># 对应用开放的接口</span>
+   - src/
+    - ble_hs_id_priv.h <span class="token comment"># 内部使用接口，对应用不可见</span>
+    - ble_hs_id.c <span class="token comment"># 功能实现</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>下面将公共地址（Public Address）和随机地址（Random Address）分开介绍。</p>
+<h2 id="Public-Address"><a href="#Public-Address" class="headerlink" title="Public Address"></a>Public Address</h2><p>ble_hs_id.c 文件里用一个静态数组 <code>ble_hs_id_pub</code> 存储公共地址，并提供了 <code>ble_hs_id_set_pub()</code> 函数接口来设置该地址。</p>
+<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token keyword">static</span> <span class="token class-name">uint8_t</span> ble_hs_id_pub<span class="token punctuation">[</span><span class="token number">6</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+<span class="token keyword">void</span> <span class="token function">ble_hs_id_set_pub</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token class-name">uint8_t</span> <span class="token operator">*</span>pub_addr<span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    <span class="token function">memcpy</span><span class="token punctuation">(</span>ble_hs_id_pub<span class="token punctuation">,</span> pub_addr<span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>不幸的是，该接口位于 ble_hs_id_priv.h 内部接口文件里，应用层不能使用该接口。进一步在协议栈中搜索该接口的调用位置，发现是在协议栈初始化的时候调用的：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">nimble/host/src/ble_hs_startup.c
+ - ble_hs_startup_go<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  - ble_hs_startup_read_bd_addr<span class="token punctuation">(</span><span class="token punctuation">)</span>
+   - ble_hs_id_set_pub<span class="token punctuation">(</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>继续查看 <code>ble_hs_startup_read_bd_addr()</code> 函数：</p>
+<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">int</span> <span class="token function">ble_hs_startup_read_bd_addr</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    <span class="token keyword">struct</span> <span class="token class-name">ble_hci_ip_rd_bd_addr_rp</span> rsp<span class="token punctuation">;</span>
+    <span class="token keyword">int</span> rc<span class="token punctuation">;</span>
+
+    rc <span class="token operator">=</span> <span class="token function">ble_hs_hci_cmd_tx</span><span class="token punctuation">(</span><span class="token function">BLE_HCI_OP</span><span class="token punctuation">(</span>BLE_HCI_OGF_INFO_PARAMS<span class="token punctuation">,</span>
+                                      BLE_HCI_OCF_IP_RD_BD_ADDR<span class="token punctuation">)</span><span class="token punctuation">,</span>
+                           <span class="token constant">NULL</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>rsp<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>rsp<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>rc <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> rc<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token function">ble_hs_id_set_pub</span><span class="token punctuation">(</span>rsp<span class="token punctuation">.</span>addr<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>可以发现 Host 先发送了 HCI_Read_BD_ADDR 命令从 LE Controller 获取公共地址，并利用返回结果设置公共地址。</p>
+<img src="/2022/05/18/NimBLE-%E8%93%9D%E7%89%99%E8%AE%BE%E5%A4%87%E5%9C%B0%E5%9D%80%E8%AE%BE%E7%BD%AE/image-20220518104757980.png" class="" title="HCI_Read_BD_ADDR">
+
+<p><strong>命令解释：</strong>Host 发送该命令给 LE Controller 读取公共设备地址（Public Device Address），若控制器没有公共设备地址，返回 0x000000000000 ，代表无效地址。</p>
+<h2 id="Random-Address"><a href="#Random-Address" class="headerlink" title="Random Address"></a>Random Address</h2><p>ble_hs_id.c 文件里用一个静态数组 <code>ble_hs_id_rnd</code> 存储随机地址，并提供了接口 <code>ble_hs_id_set_rnd()</code> 设置它，同时还提供了一个接口来生成随机地址：</p>
+<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token keyword">int</span> <span class="token function">ble_hs_id_gen_rnd</span><span class="token punctuation">(</span><span class="token keyword">int</span> nrpa<span class="token punctuation">,</span> <span class="token class-name">ble_addr_t</span> <span class="token operator">*</span>out_addr<span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> rc<span class="token punctuation">;</span>
+
+    out_addr<span class="token operator">-></span>type <span class="token operator">=</span> BLE_ADDR_RANDOM<span class="token punctuation">;</span>
+
+    rc <span class="token operator">=</span> <span class="token function">ble_hs_hci_util_rand</span><span class="token punctuation">(</span>out_addr<span class="token operator">-></span>val<span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>rc <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> rc<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>nrpa<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        out_addr<span class="token operator">-></span>val<span class="token punctuation">[</span><span class="token number">5</span><span class="token punctuation">]</span> <span class="token operator">&amp;=</span> <span class="token operator">~</span><span class="token number">0xc0</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+        out_addr<span class="token operator">-></span>val<span class="token punctuation">[</span><span class="token number">5</span><span class="token punctuation">]</span> <span class="token operator">|=</span> <span class="token number">0xc0</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>不过该接口是通过发送 HCI_LE_Read 命令从 Controller 端获取随机数，而该命令一般只有控制器支持 LE Encryption Feature 时才支持，因此 <code>ble_hs_id_gen_rnd()</code> 接口很有可能会失败，需仔细检查返回值。</p>
+<img src="/2022/05/18/NimBLE-%E8%93%9D%E7%89%99%E8%AE%BE%E5%A4%87%E5%9C%B0%E5%9D%80%E8%AE%BE%E7%BD%AE/image-20220518113320622.png" class="" title="HCI_LE_Read">
+
+<p><strong>命令解释：</strong>Host 发送该命令给 LE Controller，当控制器支持  LE Feature (LE Encryption) 时，返回 8 字节的随机数。</p>
+<h2 id="配置使用"><a href="#配置使用" class="headerlink" title="配置使用"></a>配置使用</h2><p>ble_hs_id.h 接口文件里 <code>ble_hs_id_infer_auto()</code> 接口能够自动识别协议栈内部已拥有的地址，并可获取地址类型，若协议栈内没有地址，返回错误码 <code>BLE_HS_ENOADDR</code> 。</p>
+<p>因此 NimBLE 对于蓝牙设备地址的配置共有三种模式：</p>
 <ul>
-<li><strong>双链表</strong>：在任意列表元素前插入一个新的记录</li>
-<li><strong>尾队列</strong>：在列表的尾部插入一个新的记录，反向遍历列表</li>
-<li><strong>单链表的尾队列</strong>：在列表的尾部插入一个新的记录</li>
-<li><strong>环形队列</strong>：在列表的尾部插入一个新的记录，反向遍历列表</li>
-</ul>
-<p>所有数据结构可用的功能可参考下述表格：</p>
-<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token comment">/**
- *                      SLIST   LIST    STAILQ  TAILQ   CIRCLEQ
- * _HEAD                +       +       +       +       +
- * _HEAD_INITIALIZER    +       +       +       +       +
- * _ENTRY               +       +       +       +       +
- * _INIT                +       +       +       +       +
- * _EMPTY               +       +       +       +       +
- * _FIRST               +       +       +       +       +
- * _NEXT                +       +       +       +       +
- * _PREV                -       -       -       +       +
- * _LAST                -       -       +       +       +
- * _FOREACH             +       +       +       +       +
- * _FOREACH_REVERSE     -       -       -       +       +
- * _INSERT_HEAD         +       +       +       +       +
- * _INSERT_BEFORE       -       +       -       +       +
- * _INSERT_AFTER        +       +       +       +       +
- * _INSERT_TAIL         -       -       +       +       +
- * _REMOVE_HEAD         +       -       +       -       -
- * _REMOVE              +       +       +       +       +
-*/</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-
-<h2 id="单链表"><a href="#单链表" class="headerlink" title="单链表"></a>单链表</h2><p>本小节以单链表为例，介绍 <code>SLIST_*</code> 宏该如何使用，学会了单链表，其他的数据结构也可以类似使用。</p>
-<p>声明单链表头部：</p>
-<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token function">SLIST_HEAD</span><span class="token punctuation">(</span>headname<span class="token punctuation">,</span> type<span class="token punctuation">)</span> head<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
-
-<p><code>SLIST_HEAD()</code> 宏用于声明单链表头节点，其内部包含指向链表里第一个元素的指针。<code>headname</code> 是该链表的名称，<code>type</code> 是挂载到链表上的结构体类型。声明完链表的头节点名称后，我们就可以定义头节点以及其指针：</p>
-<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token keyword">struct</span> <span class="token class-name">headname</span> head<span class="token punctuation">,</span> <span class="token operator">*</span>headp<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
-
-<p>若是不关心头节点名称，声明代码可省略成：</p>
-<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token function">SLIST_HEAD</span><span class="token punctuation">(</span><span class="token punctuation">,</span> type<span class="token punctuation">)</span> head<span class="token punctuation">,</span> <span class="token operator">*</span>headp<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
-
-<p>示例代码如下：</p>
-<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token keyword">struct</span> <span class="token class-name">peer_chr</span> <span class="token punctuation">&#123;</span>
-    <span class="token function">SLIST_ENTRY</span><span class="token punctuation">(</span>peer_chr<span class="token punctuation">)</span> next<span class="token punctuation">;</span>
-    <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
-<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
-<span class="token function">SLIST_HEAD</span><span class="token punctuation">(</span>peer_chr_list<span class="token punctuation">,</span> peer_chr<span class="token punctuation">)</span><span class="token punctuation">;</span>
-
-<span class="token keyword">struct</span> <span class="token class-name">peer_svc</span> <span class="token punctuation">&#123;</span>
-    <span class="token keyword">struct</span> <span class="token class-name">peer_chr_list</span> chrs<span class="token punctuation">;</span>
-    <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
-<span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-
-<p>上述代码声明了一个单链表类型，名称为 <code>peer_chr_list</code>，链表上挂载的结构体类型是 <code>peer_chr</code>，并且在 <code>peer_svc</code> 结构体里创建了一个该单链表。</p>
-<p>初始化链表头部有两种方式，一种是 <code>SLIST_INIT(head)</code> ，另一种是静态初始化 <code>SLIST_HEAD_INITIALIZER(head)</code>，<strong>注意在使用单链表时传入的都是头节点指针</strong>。</p>
-<p><code>SLIST_ENTRY(type)</code> 宏用于定义链表里指向下一个元素的指针，<code>type</code> 为链表上挂载的结构体类型，具体使用可参考上述示例。</p>
-<p>接下来就是一系列操作单链表的宏了，包括插入元素，删除元素，遍历单链表。</p>
-<p>插入元素使用下述两个宏：</p>
-<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token function">SLIST_INSERT_HEAD</span><span class="token punctuation">(</span>head<span class="token punctuation">,</span> elm<span class="token punctuation">,</span> field<span class="token punctuation">)</span><span class="token punctuation">;</span>
-<span class="token function">SLIST_INSERT_AFTER</span><span class="token punctuation">(</span>slistelm<span class="token punctuation">,</span> elm<span class="token punctuation">,</span> field<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
-
-<p><code>SLIST_INSERT_HEAD()</code> 宏用于在链表头部插入新元素，<code>head</code> 是链表头节点，<code>elm</code> 是待插入元素，<code>field</code> 是 <code>SLIST_ENTRY()</code> 宏创建的连接对象，例如上述示例的 <code>next</code> 。</p>
-<p><code>SLIST_INSERT_AFTER()</code> 宏用于在链表中的一个元素后插入新元素，<code>slistelm</code> 代表链表中的元素，即将在该元素后插入新元素。其余的宏参数参考上述描述。</p>
-<p>删除元素使用下述两个宏：</p>
-<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token function">SLIST_REMOVE_HEAD</span><span class="token punctuation">(</span>head<span class="token punctuation">,</span> field<span class="token punctuation">)</span><span class="token punctuation">;</span>
-<span class="token function">SLIST_REMOVE</span><span class="token punctuation">(</span>head<span class="token punctuation">,</span> elm<span class="token punctuation">,</span> type<span class="token punctuation">,</span> field<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
-
-<p><code>SLIST_REMOVE_HEAD()</code> 用于删除链表的第一个元素，<code>SLIST_REMOVE()</code> 用于在链表中删除指定元素。</p>
-<p>单链表支持下述两种遍历方式：</p>
-<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token function">SLIST_FIRST</span><span class="token punctuation">(</span>head<span class="token punctuation">)</span><span class="token punctuation">;</span>
-<span class="token function">SLIST_NEXT</span><span class="token punctuation">(</span>elm<span class="token punctuation">,</span> field<span class="token punctuation">)</span><span class="token punctuation">;</span>
-
-<span class="token keyword">for</span> <span class="token punctuation">(</span>np <span class="token operator">=</span> <span class="token function">SLIST_FIRST</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>head<span class="token punctuation">)</span><span class="token punctuation">;</span> np <span class="token operator">!=</span> <span class="token constant">NULL</span><span class="token punctuation">;</span> np <span class="token operator">=</span> <span class="token function">SLIST_NEXT</span><span class="token punctuation">(</span>np<span class="token punctuation">,</span> FIELDNAME<span class="token punctuation">)</span><span class="token punctuation">)</span>
-    
-<span class="token function">SLIST_FOREACH</span><span class="token punctuation">(</span>np<span class="token punctuation">,</span> head<span class="token punctuation">,</span> FIELDNAME<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-
-<p>还可以用 <code>SLIST_EMPTY(head)</code> 判断单链表是否为空。</p>
-<p>例程如下：</p>
-<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token function">SLIST_HEAD</span><span class="token punctuation">(</span>listhead<span class="token punctuation">,</span> entry<span class="token punctuation">)</span> head<span class="token punctuation">;</span>
-<span class="token keyword">struct</span> <span class="token class-name">entry</span> <span class="token punctuation">&#123;</span>
-	<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
-	<span class="token function">SLIST_ENTRY</span><span class="token punctuation">(</span>entry<span class="token punctuation">)</span> entries<span class="token punctuation">;</span>	<span class="token comment">/* Simple list. */</span>
-	<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
-<span class="token punctuation">&#125;</span> <span class="token operator">*</span>n1<span class="token punctuation">,</span> <span class="token operator">*</span>n2<span class="token punctuation">,</span> <span class="token operator">*</span>np<span class="token punctuation">;</span>
-
-<span class="token function">SLIST_INIT</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>head<span class="token punctuation">)</span><span class="token punctuation">;</span>			<span class="token comment">/* Initialize simple list. */</span>
-
-n1 <span class="token operator">=</span> <span class="token function">malloc</span><span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">struct</span> <span class="token class-name">entry</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>	<span class="token comment">/* Insert at the head. */</span>
-<span class="token function">SLIST_INSERT_HEAD</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>head<span class="token punctuation">,</span> n1<span class="token punctuation">,</span> entries<span class="token punctuation">)</span><span class="token punctuation">;</span>
-
-n2 <span class="token operator">=</span> <span class="token function">malloc</span><span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">struct</span> <span class="token class-name">entry</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>	<span class="token comment">/* Insert after. */</span>
-<span class="token function">SLIST_INSERT_AFTER</span><span class="token punctuation">(</span>n1<span class="token punctuation">,</span> n2<span class="token punctuation">,</span> entries<span class="token punctuation">)</span><span class="token punctuation">;</span>
-
-<span class="token function">SLIST_FOREACH</span><span class="token punctuation">(</span>np<span class="token punctuation">,</span> <span class="token operator">&amp;</span>head<span class="token punctuation">,</span> entries<span class="token punctuation">)</span>	<span class="token comment">/* Forward traversal. */</span>
-	np<span class="token operator">-></span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
-
-<span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token function">SLIST_EMPTY</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>head<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>	 	<span class="token comment">/* Delete. */</span>
-	n1 <span class="token operator">=</span> <span class="token function">SLIST_FIRST</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>head<span class="token punctuation">)</span><span class="token punctuation">;</span>
-	<span class="token function">SLIST_REMOVE_HEAD</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>head<span class="token punctuation">,</span> entries<span class="token punctuation">)</span><span class="token punctuation">;</span>
-	<span class="token function">free</span><span class="token punctuation">(</span>n1<span class="token punctuation">)</span><span class="token punctuation">;</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-
-
-
-<p>参考：</p>
-<ul>
-<li><a target="_blank" rel="noopener" href="https://man.openbsd.org/queue.3">https://man.openbsd.org/queue.3</a></li>
-<li><a target="_blank" rel="noopener" href="https://github.com/Jackistang/c-utils/blob/main/BSD-queue/queue.h">https://github.com/Jackistang/c-utils/blob/main/BSD-queue/queue.h</a></li>
+<li>若 Controller 拥有公共地址，在应用程序里直接调用 <code>ble_hs_id_infer_auto()</code> 接口获取地址类型即可，公共地址读取的工作在协议栈初始化的时候就完成了。</li>
+<li>若 Controller 没有公共地址，但支持 HCI_LE_Read 命令，先通过 <code>ble_hs_id_gen_rnd()</code> 生成随机设备地址，再通过 <code>ble_hs_id_set_rnd()</code> 函数设置随机地址，地址类型为 Random 。</li>
+<li>其他情况，固定一个随机设备地址，或利用 Host 硬件自身的功能生成随机地址，然后通过 <code>ble_hs_id_set_rnd()</code> 函数设置随即地址，地址类型为 Random 。</li>
 </ul>
 
                 
@@ -612,7 +582,7 @@ n2 <span class="token operator">=</span> <span class="token function">malloc</sp
                     </i>
                 </span>
                 <span class="reprint-info">
-                    <a href="http://Jackistang.github.io/2022/05/16/BSD-queue/">http://Jackistang.github.io/2022/05/16/BSD-queue/</a>
+                    <a href="http://Jackistang.github.io/2022/05/18/NimBLE-%E8%93%9D%E7%89%99%E8%AE%BE%E5%A4%87%E5%9C%B0%E5%9D%80%E8%AE%BE%E7%BD%AE/">http://Jackistang.github.io/2022/05/18/NimBLE-%E8%93%9D%E7%89%99%E8%AE%BE%E5%A4%87%E5%9C%B0%E5%9D%80%E8%AE%BE%E7%BD%AE/</a>
                 </span>
             </div>
             <div class="reprint__notice">
@@ -650,8 +620,12 @@ n2 <span class="token operator">=</span> <span class="token function">malloc</sp
                     
                         <div class="article-tag">
                             
-                                <a href="/tags/c-utils/">
-                                    <span class="chip bg-color">c-utils</span>
+                                <a href="/tags/NimBLE/">
+                                    <span class="chip bg-color">NimBLE</span>
+                                </a>
+                            
+                                <a href="/tags/Bluetooth-Address/">
+                                    <span class="chip bg-color">Bluetooth Address</span>
                                 </a>
                             
                         </div>
@@ -825,9 +799,60 @@ n2 <span class="token operator">=</span> <span class="token function">malloc</sp
 <article id="prenext-posts" class="prev-next articles">
     <div class="row article-row">
         
-        <div class="article col s12 m6" data-aos="fade-up">
+        <div class="article col s12 m6" data-aos="fade-up" data-aos="fade-up">
             <div class="article-badge left-badge text-color">
-                <i class="fas fa-chevron-left"></i>&nbsp;上一篇</div>
+                <i class="far fa-dot-circle"></i>&nbsp;本篇
+            </div>
+            <div class="card">
+                <a href="/2022/05/18/NimBLE-%E8%93%9D%E7%89%99%E8%AE%BE%E5%A4%87%E5%9C%B0%E5%9D%80%E8%AE%BE%E7%BD%AE/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/15.jpg" class="responsive-img" alt="NimBLE-蓝牙设备地址设置">
+                        
+                        <span class="card-title">NimBLE-蓝牙设备地址设置</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2022-05-18
+                            </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-user fa-fw"></i>
+                            Jackistang
+                            
+                        </span>
+                    </div>
+                </div>
+
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/NimBLE/">
+                        <span class="chip bg-color">NimBLE</span>
+                    </a>
+                    
+                    <a href="/tags/Bluetooth-Address/">
+                        <span class="chip bg-color">Bluetooth Address</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge right-badge text-color">
+                下一篇&nbsp;<i class="fas fa-chevron-right"></i>
+            </div>
             <div class="card">
                 <a href="/2022/05/17/NimBLE-LOG%E7%A7%BB%E6%A4%8D/">
                     <div class="card-image">
@@ -845,9 +870,9 @@ n2 <span class="token operator">=</span> <span class="token function">malloc</sp
                         
                     </div>
                     <div class="publish-info">
-                        <span class="publish-date">
-                            <i class="far fa-clock fa-fw icon-date"></i>2022-05-17
-                        </span>
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2022-05-17
+                            </span>
                         <span class="publish-author">
                             
                             <i class="fas fa-user fa-fw"></i>
@@ -865,51 +890,6 @@ n2 <span class="token operator">=</span> <span class="token function">malloc</sp
                     
                     <a href="/tags/log/">
                         <span class="chip bg-color">log</span>
-                    </a>
-                    
-                </div>
-                
-            </div>
-        </div>
-        
-        
-        <div class="article col s12 m6" data-aos="fade-up">
-            <div class="article-badge right-badge text-color">
-                下一篇&nbsp;<i class="fas fa-chevron-right"></i>
-            </div>
-            <div class="card">
-                <a href="/2022/05/14/BLE-L2CAP/">
-                    <div class="card-image">
-                        
-                        
-                        <img src="/medias/featureimages/19.jpg" class="responsive-img" alt="BLE_L2CAP 详解">
-                        
-                        <span class="card-title">BLE_L2CAP 详解</span>
-                    </div>
-                </a>
-                <div class="card-content article-content">
-                    <div class="summary block-with-text">
-                        
-                            
-                        
-                    </div>
-                    <div class="publish-info">
-                            <span class="publish-date">
-                                <i class="far fa-clock fa-fw icon-date"></i>2022-05-14
-                            </span>
-                        <span class="publish-author">
-                            
-                            <i class="fas fa-user fa-fw"></i>
-                            Jackistang
-                            
-                        </span>
-                    </div>
-                </div>
-                
-                <div class="card-action article-tags">
-                    
-                    <a href="/tags/BLE/">
-                        <span class="chip bg-color">BLE</span>
                     </a>
                     
                 </div>

@@ -7,7 +7,9 @@
     <meta name="keywords" content="NimBLE_LOG移植, Hexo">
     <meta name="description" content="本文记录了在 rtthread 上移植 NimBLE 1.5.0 日志系统的过程，包括需要注意的关键点。
 NimBLE 日志模块NimBLE 供移植的日志系统都在下列文件里：
-123456789101112- porting/  - nim">
+- porting/
+  - nimble/
+    - inc">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="renderer" content="webkit|ie-stand|ie-comp">
@@ -432,8 +434,12 @@ NimBLE 日志模块NimBLE 供移植的日志系统都在下列文件里：
                     
                     <div class="article-tag">
                         
-                            <a href="/tags/NimBLE-log/">
-                                <span class="chip bg-color">NimBLE log</span>
+                            <a href="/tags/NimBLE/">
+                                <span class="chip bg-color">NimBLE</span>
+                            </a>
+                        
+                            <a href="/tags/log/">
+                                <span class="chip bg-color">log</span>
                             </a>
                         
                     </div>
@@ -464,6 +470,9 @@ NimBLE 日志模块NimBLE 供移植的日志系统都在下列文件里：
         <hr class="clearfix">
 
         
+        <!-- 是否加载使用自带的 prismjs. -->
+        <link rel="stylesheet" href="/libs/prism/prism.css">
+        
 
         
 
@@ -471,7 +480,18 @@ NimBLE 日志模块NimBLE 供移植的日志系统都在下列文件里：
             <div id="articleContent">
                 <p>本文记录了在 rtthread 上移植 NimBLE 1.5.0 日志系统的过程，包括需要注意的关键点。</p>
 <h2 id="NimBLE-日志模块"><a href="#NimBLE-日志模块" class="headerlink" title="NimBLE 日志模块"></a>NimBLE 日志模块</h2><p>NimBLE 供移植的日志系统都在下列文件里：</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">- porting/</span><br><span class="line">  - nimble/</span><br><span class="line">    - include/</span><br><span class="line">      - log/</span><br><span class="line">        - log.h	# 无用文件</span><br><span class="line">      - log_common/</span><br><span class="line">        - ignore.h # 定义了 IGNORE() 宏，用于忽略宏参数</span><br><span class="line">        - log_common.h # 定义了一些日志帮助宏</span><br><span class="line">      - logcfg/</span><br><span class="line">        - logcfg.h # 配置 NimBLE host,mesh,default 模块的日志宏</span><br><span class="line">      - modlog/</span><br><span class="line">        - modlog.h # 基于 printf 的简易日志库</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">- porting/
+  - nimble/
+    - include/
+      - log/
+        - log.h	<span class="token comment"># 无用文件</span>
+      - log_common/
+        - ignore.h <span class="token comment"># 定义了 IGNORE() 宏，用于忽略宏参数</span>
+        - log_common.h <span class="token comment"># 定义了一些日志帮助宏</span>
+      - logcfg/
+        - logcfg.h <span class="token comment"># 配置 NimBLE host,mesh,default 模块的日志宏</span>
+      - modlog/
+        - modlog.h <span class="token comment"># 基于 printf 的简易日志库</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p>浏览一遍上述文件后，可以知道最重要的就只有两个文件：</p>
 <ul>
@@ -479,26 +499,67 @@ NimBLE 日志模块NimBLE 供移植的日志系统都在下列文件里：
 <li><code>modlog.h</code>：协议栈自带的基于 printf 的简易日志库。</li>
 </ul>
 <p>查看 logcfg.h 文件：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;modlog/modlog.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;log_common/log_common.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_DEBUG(...) IGNORE(__VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_INFO(...) MODLOG_INFO(4, __VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_WARN(...) MODLOG_WARN(4, __VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_ERROR(...) MODLOG_ERROR(4, __VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_CRITICAL(...) MODLOG_CRITICAL(4, __VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_DISABLED(...) MODLOG_DISABLED(4, __VA_ARGS__)</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DFLT_LOG_DEBUG(...) IGNORE(__VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DFLT_LOG_INFO(...) MODLOG_INFO(0, __VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DFLT_LOG_WARN(...) MODLOG_WARN(0, __VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DFLT_LOG_ERROR(...) MODLOG_ERROR(0, __VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DFLT_LOG_CRITICAL(...) MODLOG_CRITICAL(0, __VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DFLT_LOG_DISABLED(...) MODLOG_DISABLED(0, __VA_ARGS__)</span></span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"modlog/modlog.h"</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"log_common/log_common.h"</span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">BLE_HS_LOG_DEBUG</span><span class="token expression"><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span> <span class="token function">IGNORE</span><span class="token punctuation">(</span>__VA_ARGS__<span class="token punctuation">)</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">BLE_HS_LOG_INFO</span><span class="token expression"><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span> <span class="token function">MODLOG_INFO</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">,</span> __VA_ARGS__<span class="token punctuation">)</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">BLE_HS_LOG_WARN</span><span class="token expression"><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span> <span class="token function">MODLOG_WARN</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">,</span> __VA_ARGS__<span class="token punctuation">)</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">BLE_HS_LOG_ERROR</span><span class="token expression"><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span> <span class="token function">MODLOG_ERROR</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">,</span> __VA_ARGS__<span class="token punctuation">)</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">BLE_HS_LOG_CRITICAL</span><span class="token expression"><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span> <span class="token function">MODLOG_CRITICAL</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">,</span> __VA_ARGS__<span class="token punctuation">)</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">BLE_HS_LOG_DISABLED</span><span class="token expression"><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span> <span class="token function">MODLOG_DISABLED</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">,</span> __VA_ARGS__<span class="token punctuation">)</span></span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">DFLT_LOG_DEBUG</span><span class="token expression"><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span> <span class="token function">IGNORE</span><span class="token punctuation">(</span>__VA_ARGS__<span class="token punctuation">)</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">DFLT_LOG_INFO</span><span class="token expression"><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span> <span class="token function">MODLOG_INFO</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> __VA_ARGS__<span class="token punctuation">)</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">DFLT_LOG_WARN</span><span class="token expression"><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span> <span class="token function">MODLOG_WARN</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> __VA_ARGS__<span class="token punctuation">)</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">DFLT_LOG_ERROR</span><span class="token expression"><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span> <span class="token function">MODLOG_ERROR</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> __VA_ARGS__<span class="token punctuation">)</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">DFLT_LOG_CRITICAL</span><span class="token expression"><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span> <span class="token function">MODLOG_CRITICAL</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> __VA_ARGS__<span class="token punctuation">)</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">DFLT_LOG_DISABLED</span><span class="token expression"><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span> <span class="token function">MODLOG_DISABLED</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> __VA_ARGS__<span class="token punctuation">)</span></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p>该文件内部默认使用协议栈自带的 modlog 日志库，并且提供了 <code>BLE_HS_LOG_*()</code> 和 <code>DFLT_LOG_*()</code>，一个用于 Host 协议栈日志，另一个用于默认模块日志。</p>
 <p>在 <code>nimble/host/include/ble_hs_log.h</code> 文件里包含了 Host 协议栈的日志接口，简化了上述接口：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;modlog/modlog.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;log/log.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* Only include the logcfg header if this version of newt can generate it. */</span></span><br><span class="line"><span class="meta">#<span class="keyword">if</span> MYNEWT_VAL(NEWT_FEATURE_LOGCFG)</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;logcfg/logcfg.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG(lvl, ...) \</span></span><br><span class="line"><span class="meta">    BLE_HS_LOG_ ## lvl(__VA_ARGS__)</span></span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"modlog/modlog.h"</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"log/log.h"</span></span>
+
+<span class="token comment">/* Only include the logcfg header if this version of newt can generate it. */</span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">if</span> <span class="token expression"><span class="token function">MYNEWT_VAL</span><span class="token punctuation">(</span>NEWT_FEATURE_LOGCFG<span class="token punctuation">)</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"logcfg/logcfg.h"</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">endif</span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">BLE_HS_LOG</span><span class="token expression"><span class="token punctuation">(</span>lvl<span class="token punctuation">,</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span> </span><span class="token punctuation">\</span>
+    <span class="token expression">BLE_HS_LOG_ </span><span class="token punctuation">##</span> <span class="token expression"><span class="token function">lvl</span><span class="token punctuation">(</span>__VA_ARGS__<span class="token punctuation">)</span></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p>这样协议栈内部的日志才能看懂：<code>BLE_HS_LOG(INFO, &quot;duration=forever&quot;);</code> </p>
 <p>并且只有在 <code>MYNEWT_VAL(NEWT_FEATURE_LOGCFG)</code> 宏为 1 时才允许发送日志，默认为 1 。</p>
 <h2 id="日志模块移植"><a href="#日志模块移植" class="headerlink" title="日志模块移植"></a>日志模块移植</h2><p>如果仅仅想使用协议栈自带的日志功能，将 <code>MYNEWT_VAL(NEWT_FEATURE_LOGCFG)</code> 宏配置为 1，并且定义日志级别 <code>MYNEWT_VAL(LOG_LEVEL)</code> 即可，该日志是静态编译生效的。在 <code>modlog.h</code> 文件里定义了相关条件编译宏。</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">if</span> MYNEWT_VAL(LOG_LEVEL) &lt;= LOG_LEVEL_DEBUG</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MODLOG_DEBUG(ml_mod_, ml_msg_, ...) \</span></span><br><span class="line"><span class="meta">    printf((ml_msg_), ##__VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">else</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MODLOG_DEBUG(ml_mod_, ...) IGNORE(__VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">if</span> <span class="token expression"><span class="token function">MYNEWT_VAL</span><span class="token punctuation">(</span>LOG_LEVEL<span class="token punctuation">)</span> <span class="token operator">&lt;=</span> LOG_LEVEL_DEBUG</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">MODLOG_DEBUG</span><span class="token expression"><span class="token punctuation">(</span>ml_mod_<span class="token punctuation">,</span> ml_msg_<span class="token punctuation">,</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span> </span><span class="token punctuation">\</span>
+    <span class="token expression"><span class="token function">printf</span><span class="token punctuation">(</span><span class="token punctuation">(</span>ml_msg_<span class="token punctuation">)</span><span class="token punctuation">,</span> </span><span class="token punctuation">##</span><span class="token expression">__VA_ARGS__<span class="token punctuation">)</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">else</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">MODLOG_DEBUG</span><span class="token expression"><span class="token punctuation">(</span>ml_mod_<span class="token punctuation">,</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span> <span class="token function">IGNORE</span><span class="token punctuation">(</span>__VA_ARGS__<span class="token punctuation">)</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">endif</span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 
 
 <p>若是想对接其他的日志库，以 rtthread 的 rtdbg 日志模块为例，至少需要将 <code>BLE_HS_LOG_*()</code> 和 <code>MODLOG_DFLT_*()</code> 这两个对接。</p>
 <p>在 <code>porting/npl/rtthread/include/</code> 目录下创建 <code>logcfg/logcfg.h</code> 文件，并填充日志模块对接内容。</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> DBG_TAG <span class="string">&quot;nimble&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DBG_LVL DBG_INFO</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;rtdbg.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_DEBUG(...)       LOG_D(__VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_INFO(...)        LOG_I(__VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_WARN(...)        LOG_W(__VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_ERROR(...)       LOG_E(__VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_CRITICAL(...)    LOG_E(__VA_ARGS__)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLE_HS_LOG_DISABLED(...)    IGNORE(__VA_ARGS__)</span></span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">DBG_TAG</span> <span class="token string">"nimble"</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">DBG_LVL</span> <span class="token expression">DBG_INFO</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">"rtdbg.h"</span></span>
+
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">BLE_HS_LOG_DEBUG</span><span class="token expression"><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span>       <span class="token function">LOG_D</span><span class="token punctuation">(</span>__VA_ARGS__<span class="token punctuation">)</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">BLE_HS_LOG_INFO</span><span class="token expression"><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span>        <span class="token function">LOG_I</span><span class="token punctuation">(</span>__VA_ARGS__<span class="token punctuation">)</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">BLE_HS_LOG_WARN</span><span class="token expression"><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span>        <span class="token function">LOG_W</span><span class="token punctuation">(</span>__VA_ARGS__<span class="token punctuation">)</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">BLE_HS_LOG_ERROR</span><span class="token expression"><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span>       <span class="token function">LOG_E</span><span class="token punctuation">(</span>__VA_ARGS__<span class="token punctuation">)</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">BLE_HS_LOG_CRITICAL</span><span class="token expression"><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span>    <span class="token function">LOG_E</span><span class="token punctuation">(</span>__VA_ARGS__<span class="token punctuation">)</span></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">BLE_HS_LOG_DISABLED</span><span class="token expression"><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span>    <span class="token function">IGNORE</span><span class="token punctuation">(</span>__VA_ARGS__<span class="token punctuation">)</span></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p><strong>注意：此时编译系统内有两个 <code>logcfg/logcfg.h</code> 头文件，而 <code>nimble/host/include/ble_hs_log.h</code> 文件里仅仅 <code>#include &quot;logcfg/logcfg.h&quot;</code>，怎么确定它包含的是哪个头文件呢？</strong></p>
 <p>在编译构建脚本里，我们在导入头文件时需要将移植目录头文件路径  <code>porting/npl/rtthread/include/</code> 放在系统自带目录之前 <code>/porting/nimble/include</code> 。</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">path = [</span><br><span class="line">    cwd + <span class="string">&#x27;/porting/npl/rtthread/include&#x27;</span>,</span><br><span class="line">    cwd + <span class="string">&#x27;/porting/nimble/include&#x27;</span></span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">path <span class="token operator">=</span> <span class="token punctuation">[</span>
+    cwd <span class="token operator">+</span> <span class="token string">'/porting/npl/rtthread/include'</span><span class="token punctuation">,</span>
+    cwd <span class="token operator">+</span> <span class="token string">'/porting/nimble/include'</span>
+<span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p>完整的移植信息参考：<a target="_blank" rel="noopener" href="https://github.com/Jackistang/nimble/commit/f03bde795fc05489da007b714070154d554c482e">https://github.com/Jackistang/nimble/commit/f03bde795fc05489da007b714070154d554c482e</a></p>
 
@@ -565,8 +626,12 @@ NimBLE 日志模块NimBLE 供移植的日志系统都在下列文件里：
                     
                         <div class="article-tag">
                             
-                                <a href="/tags/NimBLE-log/">
-                                    <span class="chip bg-color">NimBLE log</span>
+                                <a href="/tags/NimBLE/">
+                                    <span class="chip bg-color">NimBLE</span>
+                                </a>
+                            
+                                <a href="/tags/log/">
+                                    <span class="chip bg-color">log</span>
                                 </a>
                             
                         </div>
@@ -740,18 +805,17 @@ NimBLE 日志模块NimBLE 供移植的日志系统都在下列文件里：
 <article id="prenext-posts" class="prev-next articles">
     <div class="row article-row">
         
-        <div class="article col s12 m6" data-aos="fade-up" data-aos="fade-up">
+        <div class="article col s12 m6" data-aos="fade-up">
             <div class="article-badge left-badge text-color">
-                <i class="far fa-dot-circle"></i>&nbsp;本篇
-            </div>
+                <i class="fas fa-chevron-left"></i>&nbsp;上一篇</div>
             <div class="card">
-                <a href="/2022/05/17/NimBLE-LOG%E7%A7%BB%E6%A4%8D/">
+                <a href="/2022/05/18/NimBLE-%E8%93%9D%E7%89%99%E8%AE%BE%E5%A4%87%E5%9C%B0%E5%9D%80%E8%AE%BE%E7%BD%AE/">
                     <div class="card-image">
                         
                         
-                        <img src="/medias/featureimages/8.jpg" class="responsive-img" alt="NimBLE_LOG移植">
+                        <img src="/medias/featureimages/15.jpg" class="responsive-img" alt="NimBLE-蓝牙设备地址设置">
                         
-                        <span class="card-title">NimBLE_LOG移植</span>
+                        <span class="card-title">NimBLE-蓝牙设备地址设置</span>
                     </div>
                 </a>
                 <div class="card-content article-content">
@@ -761,9 +825,9 @@ NimBLE 日志模块NimBLE 供移植的日志系统都在下列文件里：
                         
                     </div>
                     <div class="publish-info">
-                            <span class="publish-date">
-                                <i class="far fa-clock fa-fw icon-date"></i>2022-05-17
-                            </span>
+                        <span class="publish-date">
+                            <i class="far fa-clock fa-fw icon-date"></i>2022-05-18
+                        </span>
                         <span class="publish-author">
                             
                             <i class="fas fa-user fa-fw"></i>
@@ -772,12 +836,15 @@ NimBLE 日志模块NimBLE 供移植的日志系统都在下列文件里：
                         </span>
                     </div>
                 </div>
-
                 
                 <div class="card-action article-tags">
                     
-                    <a href="/tags/NimBLE-log/">
-                        <span class="chip bg-color">NimBLE log</span>
+                    <a href="/tags/NimBLE/">
+                        <span class="chip bg-color">NimBLE</span>
+                    </a>
+                    
+                    <a href="/tags/Bluetooth-Address/">
+                        <span class="chip bg-color">Bluetooth Address</span>
                     </a>
                     
                 </div>

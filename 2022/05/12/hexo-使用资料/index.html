@@ -463,6 +463,9 @@ hexo 主题 Matery 推荐：https://mp.weixin.qq.com/s/W1eMrZ3ziZb3dtopq4Zv_g
         <hr class="clearfix">
 
         
+        <!-- 是否加载使用自带的 prismjs. -->
+        <link rel="stylesheet" href="/libs/prism/prism.css">
+        
 
         
 
@@ -478,6 +481,25 @@ hexo 主题 Matery 推荐：https://mp.weixin.qq.com/s/W1eMrZ3ziZb3dtopq4Zv_g
 <li>配置 Typera 为：</li>
 </ol>
 <img src="/2022/05/12/hexo-%E4%BD%BF%E7%94%A8%E8%B5%84%E6%96%99/image-20220514222117506.png" class="" title="hexo图片配置">
+
+<h2 id="matery-主题代码格式错误"><a href="#matery-主题代码格式错误" class="headerlink" title="matery 主题代码格式错误"></a>matery 主题代码格式错误</h2><p>从 Hexo5.0 版本开始自带了 <code>prismjs</code> 代码语法高亮的支持，本主题对此进行了改造支持。</p>
+<p>如果你的博客中曾经安装过 <code>hexo-prism-plugin</code> 的插件，那么你须要执行 <code>npm uninstall hexo-prism-plugin</code> 来卸载掉它，否则生成的代码中会有 <code>&amp;#123;</code> 和 <code>&amp;#125;</code> 的转义字符。</p>
+<p>然后，修改 Hexo 根目录下 <code>_config.yml</code> 文件中 <code>highlight.enable</code> 的值为 <code>false</code>，并将 <code>prismjs.enable</code> 的值设置为 <code>true</code>，主要配置如下：</p>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">highlight</span><span class="token punctuation">:</span>
+  <span class="token key atrule">enable</span><span class="token punctuation">:</span> <span class="token boolean important">false</span>
+  <span class="token key atrule">line_number</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+  <span class="token key atrule">auto_detect</span><span class="token punctuation">:</span> <span class="token boolean important">false</span>
+  <span class="token key atrule">tab_replace</span><span class="token punctuation">:</span> <span class="token string">''</span>
+  <span class="token key atrule">wrap</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+  <span class="token key atrule">hljs</span><span class="token punctuation">:</span> <span class="token boolean important">false</span>
+<span class="token key atrule">prismjs</span><span class="token punctuation">:</span>
+  <span class="token key atrule">enable</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+  <span class="token key atrule">preprocess</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+  <span class="token key atrule">line_number</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+  <span class="token key atrule">tab_replace</span><span class="token punctuation">:</span> <span class="token string">''</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>主题中默认的 <code>prismjs</code> 主题是 <code>Tomorrow Night</code>，如果你想定制自己的主题，可以前往 <a target="_blank" rel="noopener" href="https://prismjs.com/download.html">prismjs 下载页面</a> 定制下载自己喜欢的主题 <code>css</code> 文件，然后将此 css 主题文件取名为 <code>prism.css</code>，替换掉 <code>hexo-theme-matery</code> 主题文件夹中的 <code>source/libs/prism/prism.css</code> 文件即可。</p>
+
                 
             </div>
             <hr/>
